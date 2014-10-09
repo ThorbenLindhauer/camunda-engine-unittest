@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:camunda="http://activiti.org/bpmn" xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd" id="Definitions_1" targetNamespace="http://activiti.org/bpmn">
+  <process id="terminateEndEventExample" name="Default Process">
+    <startEvent id="start"/>
+    <sequenceFlow id="SequenceFlow_2" sourceRef="start" targetRef="ParallelGateway_1"/>
+    <parallelGateway id="ParallelGateway_1"/>
+    
+    <!-- Sequence flow to a task followed by a terminate end event -->
+    <sequenceFlow id="SequenceFlow_4" sourceRef="ParallelGateway_1" targetRef="preTerminateTask"/>
+    <userTask id="preTerminateTask" name="task before termination"/>
+    <sequenceFlow id="SequenceFlow_5" sourceRef="preTerminateTask" targetRef="EndEvent_2"/>
+    <endEvent id="EndEvent_2">
+      <terminateEventDefinition id="TerminateEventDefinition_1"/>
+    </endEvent>
+    
+    <!-- Sequence flow to a task followed by a regular end event -->
+    <sequenceFlow id="SequenceFlow_1" sourceRef="ParallelGateway_1" targetRef="preNormalTerminateTask"/>
+    <userTask id="preNormalTerminateTask" name="task before end">
+      <extensionElements>
+        <camunda:executionListener class="org.camunda.bpm.unittest.ExampleExecutionListener" event="end"/>
+      </extensionElements>
+    </userTask>
+    <sequenceFlow id="SequenceFlow_3" sourceRef="preNormalTerminateTask" targetRef="EndEvent_1"/>
+    <endEvent id="EndEvent_1"/>
+  </process>
+</definitions>

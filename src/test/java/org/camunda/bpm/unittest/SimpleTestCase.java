@@ -12,15 +12,15 @@
  */
 package org.camunda.bpm.unittest;
 
+import org.camunda.bpm.engine.HistoryService;
 import org.camunda.bpm.engine.RuntimeService;
 import org.camunda.bpm.engine.TaskService;
+import org.camunda.bpm.engine.history.HistoricVariableInstance;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.task.Task;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.junit.Assert.*;
-
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -34,25 +34,50 @@ public class SimpleTestCase {
   public ProcessEngineRule rule = new ProcessEngineRule();
 
   @Test
-  @Deployment(resources = {"testProcess.bpmn"})
-  public void shouldExecuteProcess() {
-
+  @Deployment(resources = {"terminateEnd.bpmn20.xml"})
+  public void shouldBeCancelledOnTerminateEnd() {
     RuntimeService runtimeService = rule.getRuntimeService();
+    runtimeService.startProcessInstanceByKey("terminateEndEventExample");
+
     TaskService taskService = rule.getTaskService();
-
-    ProcessInstance pi = runtimeService.startProcessInstanceByKey("testProcess");
-    assertFalse("Process instance should not be ended", pi.isEnded());
-    assertEquals(1, runtimeService.createProcessInstanceQuery().count());
-
-    Task task = taskService.createTaskQuery().singleResult();
-    assertNotNull("Task should exist", task);
-
-    // complete the task
+    Task task = taskService.createTaskQuery().taskName("task before termination").singleResult();
     taskService.complete(task.getId());
 
-    // now the process instance should be ended
-    assertEquals(0, runtimeService.createProcessInstanceQuery().count());
-
+    assertWasCancelled(true);
   }
+
+  @Test
+  @Deployment(resources = {"oneTaskProcess.bpmn20.xml"})
+  public void shouldBeCancelledOnProcessInstanceDeletion() {
+    RuntimeService runtimeService = rule.getRuntimeService();
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("oneTaskProcess");
+
+    runtimeService.deleteProcessInstance(processInstance.getId(), null);
+
+    assertWasCancelled(true);
+  }
+
+  @Test
+  @Deployment(resources = {"terminateEnd.bpmn20.xml"})
+  public void shouldNotBeCancelledOnRegularEnd() {
+    RuntimeService runtimeService = rule.getRuntimeService();
+    runtimeService.startProcessInstanceByKey("terminateEndEventExample");
+
+    TaskService taskService = rule.getTaskService();
+    Task task = taskService.createTaskQuery().taskName("task before end").singleResult();
+    taskService.complete(task.getId());
+
+    assertWasCancelled(false);
+  }
+
+  protected void assertWasCancelled(boolean wasCancelled) {
+    HistoryService historyService = rule.getHistoryService();
+    HistoricVariableInstance variable = historyService.createHistoricVariableInstanceQuery().singleResult();
+    Assert.assertNotNull(variable);
+    Assert.assertEquals("isCancelled", variable.getVariableName());
+    Assert.assertEquals(wasCancelled, variable.getValue());
+  }
+
+
 
 }
