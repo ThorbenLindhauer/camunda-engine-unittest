@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<definitions author="HSN18" exporter="CMMN Web Modeler" id="Test6_Definitions" name="Test 6 Case Definitions"
+             xmlns="http://www.omg.org/spec/CMMN/20131201/MODEL"
+             xmlns:camunda="http://camunda.org/schema/1.0/cmmn"
+             xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+             targetNamespace="Examples">
+    <case id="Case_Test6">
+
+        <casePlanModel autoComplete="false" name="Test_6 Plan Model" id="CPM_563b7e04-f825-44e4-908f-45225aec1915">
+
+            <extensionElements>
+                <!-- Case execution listener which calls a delegate expression if the case is closed -->
+                <camunda:caseExecutionListener event="complete" class="com.hsn18.cs.model.cmmn.listeners.CaseExecutionCompleteListener" />
+                <camunda:field name="caseFileNodeId" stringValue="${caseFileNodeId}" />
+                <camunda:field name="nodePath" expression="${nodePath}" />
+            </extensionElements>
+
+
+            <planItem definitionRef="_Task_1" exitCriteriaRefs="_Task_1_Exit_Criteria" id="PI_Task_1"/>
+            <planItem definitionRef="_Task_2" entryCriteriaRefs="_Task_2_Entry_Criteria" id="PI_Task_2"/>
+            <planItem definitionRef="_Task_3" exitCriteriaRefs="_Task_3_Exit_Criteria" id="PI_Task_3"/>
+            <planItem definitionRef="_Task_4" id="PI_Task_4"/>
+            <sentry id="_Task_2_Entry_Criteria">
+                <planItemOnPart sentryRef="_Task_1_Exit_Criteria" sourceRef="PI_Task_1">
+                    <standardEvent>exit</standardEvent>
+                </planItemOnPart>
+            </sentry>
+            <sentry id="_Task_3_Exit_Criteria">
+                <planItemOnPart sourceRef="PI_Task_4">
+                    <standardEvent>complete</standardEvent>
+                </planItemOnPart>
+            </sentry>
+            <sentry id="_Task_1_Exit_Criteria">
+                <ifPart>
+                    <condition>
+                        <body>${true}</body>
+                    </condition>
+                </ifPart>
+                    </sentry>
+            <task isBlocking="false" name="Task 1" description="" id="_Task_1"/>
+            <task isBlocking="false" name="Task 2" description="" id="_Task_2"/>
+            <task isBlocking="false" name="Task 3" description="" id="_Task_3"/>
+            <task isBlocking="false" name="Task 4" description="" id="_Task_4"/>
+        </casePlanModel>
+    </case>
+</definitions>
+
