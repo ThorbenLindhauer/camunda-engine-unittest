@@ -12,12 +12,22 @@
  */
 package org.camunda.bpm.unittest;
 
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.repositoryService;
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.runtimeService;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.Collection;
+
+import org.camunda.bpm.engine.repository.ProcessDefinition;
+import org.camunda.bpm.engine.runtime.ActivityInstance;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
-
+import org.camunda.bpm.model.bpmn.BpmnModelInstance;
+import org.camunda.bpm.model.bpmn.instance.ExtensionElements;
+import org.camunda.bpm.model.bpmn.instance.Process;
+import org.camunda.bpm.model.xml.instance.ModelElementInstance;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -33,19 +43,19 @@ public class SimpleTestCase {
   @Test
   @Deployment(resources = {"testProcess.bpmn"})
   public void shouldExecuteProcess() {
-    // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
+    // get the model instance of the process definition
+    ProcessDefinition definition = repositoryService().createProcessDefinitionQuery().singleResult();
+    BpmnModelInstance modelInstance = repositoryService().getBpmnModelInstance(definition.getId());
 
-    // When we complete that task
-    complete(task(processInstance));
-    // Then the process instance should be ended
-    assertThat(processInstance).isEnded();
+    // get the extension elements
+    Collection<Process> processes = modelInstance.getModelElementsByType(Process.class);
+    Process process = processes.iterator().next();
+    ExtensionElements extensionElements = process.getExtensionElements();
+    ModelElementInstance extensionElement = extensionElements.getElements().iterator().next();
+
+    // assert the extension
+    assertThat(extensionElement.getElementType().getTypeName()).isEqualTo("someExtension");
+    assertThat(extensionElement.getTextContent()).isEqualTo("someExtensionValue");
   }
 
 }
