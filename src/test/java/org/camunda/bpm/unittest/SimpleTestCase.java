@@ -12,12 +12,17 @@
  */
 package org.camunda.bpm.unittest;
 
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.runtimeService;
+
+import org.camunda.bpm.engine.OptimisticLockingException;
+import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
+import org.camunda.bpm.engine.impl.interceptor.Command;
+import org.camunda.bpm.engine.impl.interceptor.CommandContext;
+import org.camunda.bpm.engine.impl.interceptor.CommandExecutor;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
-
+import org.camunda.bpm.engine.variable.Variables;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -34,18 +39,37 @@ public class SimpleTestCase {
   @Deployment(resources = {"testProcess.bpmn"})
   public void shouldExecuteProcess() {
     // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
+    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess",
+        Variables.createVariables().putValue("myCounter", 0));
 
-    // When we complete that task
-    complete(task(processInstance));
-    // Then the process instance should be ended
-    assertThat(processInstance).isEnded();
+    ProcessEngineConfigurationImpl engineConfiguration = (ProcessEngineConfigurationImpl) rule.getProcessEngine().getProcessEngineConfiguration();
+    CommandExecutor commandExecutor = engineConfiguration.getCommandExecutorTxRequired();
+
+    readModifyWriteVariable(commandExecutor, processInstance.getId(), "myCounter", 1);
+  }
+
+  protected void readModifyWriteVariable(CommandExecutor commandExecutor, final String processInstanceId,
+      final String variableName, final int valueToAdd) {
+
+    try {
+      commandExecutor.execute(new Command<Void>() {
+        public Void execute(CommandContext commandContext) {
+          Integer myCounter = (Integer) runtimeService().getVariable(processInstanceId, variableName);
+
+          // do something with variable
+          myCounter += valueToAdd;
+
+          // the update provokes an OptimisticLockingException when the command ends, if the variable was updated meanwhile
+          runtimeService().setVariable(processInstanceId, variableName, myCounter);
+
+          return null;
+        }
+      });
+    } catch (OptimisticLockingException e) {
+      // try again
+      readModifyWriteVariable(commandExecutor, processInstanceId, variableName, valueToAdd);
+    }
+
   }
 
 }
