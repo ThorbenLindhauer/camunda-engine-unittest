@@ -42,8 +42,15 @@ public class SimpleTestCase {
     // And there should exist just a single task within that process instance
     assertThat(task(processInstance)).isNotNull();
 
+    assertThat(task(processInstance)).isAssignedTo("Kermit");
+
     // When we complete that task
     complete(task(processInstance));
+
+    assertThat(task(processInstance)).isAssignedTo("Fozzie");
+
+    complete(task(processInstance));
+
     // Then the process instance should be ended
     assertThat(processInstance).isEnded();
   }

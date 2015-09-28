@@ -22,6 +22,7 @@
     <property name="customPostBPMNParseListeners">
       <list>
         <bean class="org.camunda.bpm.engine.impl.bpmn.parser.FoxFailedJobParseListener" />
+        <bean class="org.camunda.bpm.unittest.TaskAssigneeParseListener" />
       </list>
     </property>
 
