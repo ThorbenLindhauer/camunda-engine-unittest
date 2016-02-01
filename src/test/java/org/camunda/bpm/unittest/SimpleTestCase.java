@@ -12,12 +12,14 @@
  */
 package org.camunda.bpm.unittest;
 
-import org.camunda.bpm.engine.runtime.ProcessInstance;
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.runtimeService;
+
+import java.util.List;
+
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
-
+import org.camunda.bpm.engine.variable.Variables;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -31,21 +33,23 @@ public class SimpleTestCase {
   public ProcessEngineRule rule = new ProcessEngineRule();
 
   @Test
-  @Deployment(resources = {"testProcess.bpmn"})
+  @Deployment(resources = {"testProcess.bpmn20.xml"})
   public void shouldExecuteProcess() {
-    // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
 
-    // When we complete that task
-    complete(task(processInstance));
-    // Then the process instance should be ended
-    assertThat(processInstance).isEnded();
+    DelegateEvent.clearEvents();
+
+    // Given we create a new process instance
+    runtimeService().startProcessInstanceByKey("process",
+        Variables.createVariables().putValue("myBean", new DelegateBean()));
+
+    // then the collection expression was invoked with a proper delegate execution
+    List<DelegateEvent> recordedEvents = DelegateEvent.getEvents();
+    Assert.assertEquals(1, recordedEvents.size());
+    DelegateEvent recordedEvent = recordedEvents.get(0);
+
+    Assert.assertEquals("miTasks#multiInstanceBody", recordedEvent.getCurrentActivityId());
+
+    DelegateEvent.clearEvents();
   }
 
 }
