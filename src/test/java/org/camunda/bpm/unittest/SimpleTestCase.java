@@ -12,9 +12,11 @@
  */
 package org.camunda.bpm.unittest;
 
+import org.camunda.bpm.engine.runtime.Execution;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
+import org.camunda.bpm.engine.variable.Variables;
 
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
 
@@ -34,16 +36,21 @@ public class SimpleTestCase {
   @Deployment(resources = {"testProcess.bpmn"})
   public void shouldExecuteProcess() {
     // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
+    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess",
+        Variables.createVariables().putValue("correlationVar", "correlationValue"));
 
-    // When we complete that task
-    complete(task(processInstance));
+    Execution serviceTaskScopeExecution = runtimeService().createExecutionQuery()
+        .activityId("ServiceTask_1")
+        .processVariableValueEquals("correlationVar", "correlationValue")
+        .executionId(AsyncServiceTaskBehavior.MOST_RECENT_EXECUTION_ID)
+        .singleResult();
+
+    assertThat(serviceTaskScopeExecution).isNotNull();
+    assertThat(serviceTaskScopeExecution.getId()).isNotEqualTo(serviceTaskScopeExecution.getProcessInstanceId());
+
+    // When we signal the async task
+    runtimeService().signal(serviceTaskScopeExecution.getId());
+
     // Then the process instance should be ended
     assertThat(processInstance).isEnded();
   }
