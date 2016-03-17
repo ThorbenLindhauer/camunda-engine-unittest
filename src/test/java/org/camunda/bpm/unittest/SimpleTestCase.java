@@ -12,12 +12,18 @@
  */
 package org.camunda.bpm.unittest;
 
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.managementService;
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.runtimeService;
+
+import java.util.HashMap;
+
+import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
+import org.camunda.bpm.engine.runtime.Job;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
-
+import org.camunda.bpm.engine.variable.Variables;
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -32,20 +38,21 @@ public class SimpleTestCase {
 
   @Test
   @Deployment(resources = {"testProcess.bpmn"})
-  public void shouldExecuteProcess() {
+  public void shouldExecuteProcess() throws InterruptedException {
     // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
+    ProcessInstance processInstance = runtimeService()
+        .startProcessInstanceByKey("testProcess", Variables.createVariables().putValue("foo", "bar"));
 
-    // When we complete that task
-    complete(task(processInstance));
-    // Then the process instance should be ended
-    assertThat(processInstance).isEnded();
+    runtimeService().correlateMessage("Message", new HashMap<String, Object>(), Variables.createVariables().putValue("foo", "bar"));
+
+
+    ProcessEngineConfigurationImpl processEngineConfiguration = (ProcessEngineConfigurationImpl) rule.getProcessEngine().getProcessEngineConfiguration();
+
+    Job job = managementService().createJobQuery().singleResult();
+
+    managementService().executeJob(job.getId());
+
+    Assert.assertEquals(1, rule.getTaskService().createTaskQuery().count());
   }
 
 }
