@@ -12,12 +12,18 @@
  */
 package org.camunda.bpm.unittest;
 
-import org.camunda.bpm.engine.runtime.ProcessInstance;
+import java.util.List;
+import java.util.Set;
+
+import org.apache.deltaspike.cdise.api.CdiContainer;
+import org.apache.deltaspike.cdise.api.CdiContainerLoader;
+import org.camunda.bpm.engine.cdi.BusinessProcessEvent;
+import org.camunda.bpm.engine.cdi.impl.util.ProgrammaticBeanLookup;
+import org.camunda.bpm.engine.task.Task;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
-
+import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -27,25 +33,66 @@ import org.junit.Test;
  */
 public class SimpleTestCase {
 
+  protected static CdiContainer cdiContainer;
+
+  @BeforeClass
+  public static void setUp() {
+    cdiContainer = CdiContainerLoader.getCdiContainer();
+    cdiContainer.boot();
+    cdiContainer.getContextControl().startContexts();
+  }
+
   @Rule
   public ProcessEngineRule rule = new ProcessEngineRule();
 
   @Test
-  @Deployment(resources = {"testProcess.bpmn"})
-  public void shouldExecuteProcess() {
-    // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
+  @Deployment(resources = "miParallelProcess.bpmn20.xml")
+  public void testParallelMultiInstanceEventsAfterExternalTrigger() {
 
-    // When we complete that task
-    complete(task(processInstance));
-    // Then the process instance should be ended
-    assertThat(processInstance).isEnded();
+    rule.getRuntimeService().startProcessInstanceByKey("process");
+
+    TestEventListener listenerBean = ProgrammaticBeanLookup.lookup(TestEventListener.class);
+    listenerBean.reset();
+
+    List<Task> tasks = rule.getTaskService().createTaskQuery().list();
+    Assert.assertEquals(3, tasks.size());
+
+    for (Task task : tasks) {
+      rule.getTaskService().complete(task.getId());
+    }
+
+    Assert.assertEquals(0, rule.getRuntimeService().createProcessInstanceQuery().count());
+
+    // 6: three user task instances (complete + end)
+    // 1: one mi body instance (end)
+    // 1: one sequence flow instance (take)
+    // 2: one end event instance (start + end)
+    // = 10 expected events
+
+    // - 4 events that are prevented by the workaround listener
+    Set<BusinessProcessEvent> eventsReceived = listenerBean.getEventsReceived();
+    Assert.assertEquals(6, eventsReceived.size());
+  }
+
+  @Test
+  @Deployment(resources = "miSequentialProcess.bpmn20.xml")
+  public void testSequentialMultiInstanceEventsAfterExternalTrigger() {
+
+    rule.getRuntimeService().startProcessInstanceByKey("process");
+
+    TestEventListener listenerBean = ProgrammaticBeanLookup.lookup(TestEventListener.class);
+    listenerBean.reset();
+
+    for (int i = 0; i < 3; i++) {
+      Task task = rule.getTaskService().createTaskQuery().singleResult();
+      Assert.assertNotNull(task);
+      rule.getTaskService().complete(task.getId());
+    }
+
+    Assert.assertEquals(0, rule.getRuntimeService().createProcessInstanceQuery().count());
+
+    Set<BusinessProcessEvent> eventsReceived = listenerBean.getEventsReceived();
+    Assert.assertEquals(10, eventsReceived.size());
   }
 
 }
