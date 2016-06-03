@@ -12,12 +12,16 @@
  */
 package org.camunda.bpm.unittest;
 
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.runtimeService;
+
+import org.camunda.bpm.engine.externaltask.LockedExternalTask;
+import org.camunda.bpm.engine.migration.MigrationPlan;
+import org.camunda.bpm.engine.repository.ProcessDefinition;
+import org.camunda.bpm.engine.runtime.Incident;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
-
+import org.junit.Assert;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -31,21 +35,42 @@ public class SimpleTestCase {
   public ProcessEngineRule rule = new ProcessEngineRule();
 
   @Test
-  @Deployment(resources = {"testProcess.bpmn"})
+  @Deployment(resources = {"testProcess.bpmn", "callingProcess.bpmn", "callingProcess_V2.bpmn"})
   public void shouldExecuteProcess() {
     // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
+    ProcessDefinition callingProcess = rule.getRepositoryService()
+        .createProcessDefinitionQuery()
+        .processDefinitionKey("callingProcess")
+        .singleResult();
+    ProcessInstance processInstance = runtimeService().startProcessInstanceById(callingProcess.getId());
 
-    // When we complete that task
-    complete(task(processInstance));
-    // Then the process instance should be ended
-    assertThat(processInstance).isEnded();
+    LockedExternalTask task = rule.getExternalTaskService().fetchAndLock(1, "foo")
+      .topic("foo", 1000L)
+      .execute()
+      .get(0);
+    // creating an incident in the called and calling process
+    rule.getExternalTaskService().handleFailure(task.getId(), "foo", "error", 0, 1000L);
+
+    Incident incidentInCallingProcess = runtimeService().createIncidentQuery().processDefinitionId(callingProcess.getId()).singleResult();
+
+    // when
+    ProcessDefinition callingProcessV2 = rule.getRepositoryService()
+        .createProcessDefinitionQuery()
+        .processDefinitionKey("callingProcessV2")
+        .singleResult();
+
+    MigrationPlan migrationPlan = runtimeService()
+        .createMigrationPlan(callingProcess.getId(), callingProcessV2.getId())
+        .mapEqualActivities()
+        .build();
+
+    runtimeService().newMigration(migrationPlan).processInstanceIds(processInstance.getId()).execute();
+
+    // then
+    Incident incidentAfterMigration = runtimeService().createIncidentQuery().incidentId(incidentInCallingProcess.getId()).singleResult();
+    Assert.assertEquals(callingProcessV2.getId(), incidentAfterMigration.getProcessDefinitionId());
+    Assert.assertEquals("CallActivityV2", incidentAfterMigration.getActivityId());
+
   }
 
 }
