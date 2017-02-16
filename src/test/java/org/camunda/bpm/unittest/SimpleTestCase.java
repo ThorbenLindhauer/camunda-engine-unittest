@@ -12,12 +12,20 @@
  */
 package org.camunda.bpm.unittest;
 
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.runtimeService;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.camunda.bpm.engine.ManagementService;
+import org.camunda.bpm.engine.RuntimeService;
+import org.camunda.bpm.engine.runtime.Job;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
-
+import org.camunda.bpm.engine.variable.Variables;
+import org.junit.Assert;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -30,22 +38,86 @@ public class SimpleTestCase {
   @Rule
   public ProcessEngineRule rule = new ProcessEngineRule();
 
-  @Test
-  @Deployment(resources = {"testProcess.bpmn"})
-  public void shouldExecuteProcess() {
-    // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
+  protected RuntimeService runtimeService;
+  protected ManagementService managementService;
 
-    // When we complete that task
-    complete(task(processInstance));
-    // Then the process instance should be ended
-    assertThat(processInstance).isEnded();
+  @Before
+  public void setUp() {
+    runtimeService = rule.getProcessEngine().getRuntimeService();
+    managementService = rule.getProcessEngine().getManagementService();
   }
 
+  @Test
+  @Deployment(resources = {"testProcess.bpmn"})
+  public void shouldEndProcessAfterModificationWithoutVariables() {
+    // Given we create a new process instance
+    List<String> elements = new ArrayList<String>();
+    elements.add("1");
+    elements.add("2");
+    elements.add("3");
+
+    // entering and waiting in the first MI instance (job executor deactivated)
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("testProcess", Variables.createVariables().putValue("elements", elements));
+
+    // when we cancel this iteration and start again at task A
+    runtimeService().createProcessInstanceModification(processInstance.getId())
+      .cancelAllForActivity("WaitState")
+      .startBeforeActivity("Task_A")
+      .execute();
+
+    Job job = managementService.createJobQuery().singleResult();
+
+    // then this is in multi-instance state with a single instance
+    Assert.assertEquals(1, runtimeService.getVariable(job.getExecutionId(), "nrOfInstances"));
+    Assert.assertEquals(0, runtimeService.getVariable(job.getExecutionId(), "loopCounter"));
+    Assert.assertNull(runtimeService.getVariable(job.getExecutionId(), "element"));
+
+    // and when we complete the single instance
+    managementService.executeJob(job.getId());
+
+    // then the process instance ends
+    Assert.assertEquals(0, runtimeService.createProcessInstanceQuery().count());
+  }
+
+  @Test
+  @Deployment(resources = {"testProcess.bpmn"})
+  public void shouldEnterNextIterationAfterModificationWithVariables() {
+    // Given we create a new process instance
+    List<String> elements = new ArrayList<String>();
+    elements.add("1");
+    elements.add("2");
+    elements.add("3");
+
+    // entering and waiting in the first MI instance (job executor deactivated)
+    ProcessInstance processInstance = runtimeService.startProcessInstanceByKey("testProcess", Variables.createVariables().putValue("elements", elements));
+
+    // when we cancel this iteration and start again at task A
+    runtimeService.createProcessInstanceModification(processInstance.getId())
+      .cancelAllForActivity("WaitState")
+      .startBeforeActivity("Task_A")
+      .setVariable("nrOfInstances", 3)
+      .setVariable("loopCounter", 1) // as if we are skipping to the next instance
+      .setVariable("element", "2")
+      .execute();
+
+    Job job = managementService.createJobQuery().singleResult();
+
+    // then this is in multi-instance state with total of three instances and in progress of the second instance
+    Assert.assertEquals(3, runtimeService.getVariable(job.getExecutionId(), "nrOfInstances"));
+    Assert.assertEquals(1, runtimeService.getVariable(job.getExecutionId(), "loopCounter"));
+    Assert.assertEquals("2", runtimeService.getVariable(job.getExecutionId(), "element"));
+
+    // and when we complete the current instance
+    managementService.executeJob(job.getId());
+
+    // then the process instance is not ended
+    Assert.assertEquals(1, runtimeService.createProcessInstanceQuery().count());
+
+    // but in the next iteration
+    job = managementService.createJobQuery().singleResult();
+
+    Assert.assertEquals(3, runtimeService.getVariable(job.getExecutionId(), "nrOfInstances"));
+    Assert.assertEquals(2, runtimeService.getVariable(job.getExecutionId(), "loopCounter"));
+    Assert.assertEquals("3", runtimeService.getVariable(job.getExecutionId(), "element"));
+  }
 }
