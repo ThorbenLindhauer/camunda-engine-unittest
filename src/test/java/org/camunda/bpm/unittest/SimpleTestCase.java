@@ -12,12 +12,17 @@
  */
 package org.camunda.bpm.unittest;
 
-import org.camunda.bpm.engine.runtime.ProcessInstance;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.runtimeService;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.camunda.bpm.engine.impl.cfg.ProcessEngineConfigurationImpl;
+import org.camunda.bpm.engine.impl.interceptor.Command;
+import org.camunda.bpm.engine.impl.interceptor.CommandContext;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
-
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -27,25 +32,82 @@ import org.junit.Test;
  */
 public class SimpleTestCase {
 
+  protected static final int NUM_INSTANCES = 10000;
+  protected static final Map<String, Object> variables = new HashMap<String, Object>();
+
+  static
+  {
+    for (int i = 0; i < 20; i++)
+    {
+      variables.put(new String(new char[] {(char) (65 + i)}), i);
+    }
+  }
+
   @Rule
   public ProcessEngineRule rule = new ProcessEngineRule();
 
   @Test
   @Deployment(resources = {"testProcess.bpmn"})
-  public void shouldExecuteProcess() {
+  public void shouldCreateInstancesNewWay() {
     // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
 
-    // When we complete that task
-    complete(task(processInstance));
-    // Then the process instance should be ended
-    assertThat(processInstance).isEnded();
+    ProcessEngineConfigurationImpl engineConfiguration = rule.getProcessEngineConfiguration();
+    FlushCaptor flushCaptor = (FlushCaptor) engineConfiguration.getCommandContextFactory();
+
+    long startTime = System.currentTimeMillis();
+    try{
+      flushCaptor.startCapturingFlushs();
+      runtimeService().startProcessInstanceByKey("testProcess", variables);
+    }
+    finally
+    {
+      flushCaptor.stopCapturingFlushs();
+    }
+
+    int numTransactions = 1;
+    int chunkSize = (NUM_INSTANCES - 1) / numTransactions;
+
+    for (int i = 0; i < numTransactions; i++)
+    {
+      flushCaptor.repeatFlush(engineConfiguration.getCommandExecutorTxRequired(), chunkSize);
+//      System.out.println("Transaction " + i + " done");
+    }
+    long endTime = System.currentTimeMillis();
+
+    System.out.println("Inserting took " + (endTime - startTime) + "ms");
+
+    assertThat(rule.getProcessEngine().getRuntimeService().createProcessInstanceQuery().count()).isEqualTo(NUM_INSTANCES);
   }
+
+
+  @Test
+  @Deployment(resources = {"testProcess.bpmn"})
+  public void shouldCreateInstanceOldWay() {
+    // Given we create a new process instance
+
+    ProcessEngineConfigurationImpl engineConfiguration = rule.getProcessEngineConfiguration();
+
+    long startTime = System.currentTimeMillis();
+    engineConfiguration.getCommandExecutorTxRequired().execute(new Command<Void>()
+    {
+
+      @Override
+      public Void execute(CommandContext commandContext) {
+        for (int i = 0; i < NUM_INSTANCES; i++)
+        {
+          commandContext.getProcessEngineConfiguration().getRuntimeService().startProcessInstanceByKey("testProcess", variables);
+        }
+
+        return null;
+      }
+
+    });
+    long endTime = System.currentTimeMillis();
+
+    System.out.println("Inserting took " + (endTime - startTime) + "ms");
+
+    assertThat(rule.getProcessEngine().getRuntimeService().createProcessInstanceQuery().count()).isEqualTo(NUM_INSTANCES);
+  }
+
 
 }

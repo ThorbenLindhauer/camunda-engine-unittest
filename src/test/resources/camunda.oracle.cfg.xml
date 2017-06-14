@@ -6,18 +6,18 @@
 
   <bean id="processEngineConfiguration" class="org.camunda.bpm.engine.impl.cfg.StandaloneInMemProcessEngineConfiguration">
 
-    <property name="jdbcUrl" value="jdbc:h2:mem:camunda;DB_CLOSE_DELAY=1000" />
-    <property name="jdbcDriver" value="org.h2.Driver" />
-    <property name="jdbcUsername" value="sa" />
-    <property name="jdbcPassword" value="" />
+    <property name="jdbcUrl" value="jdbc:oracle:thin:@ci3.camunda.loc:1521:xe" />
+    <property name="jdbcDriver" value="oracle.jdbc.OracleDriver" />
+    <property name="jdbcUsername" value="camunda" />
+    <property name="jdbcPassword" value="camunda" />
 
     <!-- Database configurations -->
-    <property name="databaseSchemaUpdate" value="true" />
+    <property name="databaseSchemaUpdate" value="none" />
 
     <!-- job executor configurations -->
     <property name="jobExecutorActivate" value="false" />
 
-    <property name="history" value="none" />
+    <property name="history" value="full" />
 
     <property name="customPostBPMNParseListeners">
       <list>
