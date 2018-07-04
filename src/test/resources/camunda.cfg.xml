@@ -34,6 +34,7 @@
       <list>
         <ref bean="connectProcessEnginePlugin" />
         <ref bean="spinProcessEnginePlugin" />
+        <ref bean="historyHandlerPlugin" />
       </list>
     </property>
 
@@ -44,6 +45,7 @@
   <!--<bean id="uuidGenerator" class="org.camunda.bpm.engine.impl.persistence.StrongUuidGenerator" />-->
 
   <!-- engine plugin beans -->
+  <bean id="historyHandlerPlugin" class="org.camunda.example.HistoryHandlerPlugin" />
   <bean id="connectProcessEnginePlugin" class="org.camunda.connect.plugin.impl.ConnectProcessEnginePlugin" />
   <bean id="spinProcessEnginePlugin" class="org.camunda.spin.plugin.impl.SpinProcessEnginePlugin" />
 
