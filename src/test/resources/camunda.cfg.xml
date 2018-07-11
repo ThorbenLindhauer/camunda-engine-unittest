@@ -34,6 +34,7 @@
       <list>
         <ref bean="connectProcessEnginePlugin" />
         <ref bean="spinProcessEnginePlugin" />
+        <ref bean="ldapPlugin" />
       </list>
     </property>
 
@@ -44,6 +45,27 @@
   <!--<bean id="uuidGenerator" class="org.camunda.bpm.engine.impl.persistence.StrongUuidGenerator" />-->
 
   <!-- engine plugin beans -->
+  <bean id="ldapPlugin" class="org.camunda.example.instrumentation.InstrumentedLdapPlugin">
+    <property name="serverUrl" value="ldap://localhost:10105/" />
+    <property name="managerDn" value="uid=peter,ou=office-berlin,o=camunda,c=org" />
+    <property name="managerPassword" value="peter" />    
+    <property name="baseDn" value="o=camunda,c=org" />
+    
+    <property name="userSearchBase" value="" />
+    <property name="userSearchFilter" value="(objectclass=person)" />
+    <property name="userIdAttribute" value="uid" />
+    <property name="userFirstnameAttribute" value="cn" />
+    <property name="userLastnameAttribute" value="sn" />
+    <property name="userEmailAttribute" value="mail" />
+    <property name="userPasswordAttribute" value="userpassword" />
+    
+    <property name="groupSearchBase" value="" />
+    <property name="groupSearchFilter" value="(objectclass=groupOfNames)" />
+    <property name="groupIdAttribute" value="ou" />
+    <property name="groupNameAttribute" value="cn" />
+    <property name="groupMemberAttribute" value="member" />
+    <property name="allowAnonymousLogin" value="true" />
+  </bean>
   <bean id="connectProcessEnginePlugin" class="org.camunda.connect.plugin.impl.ConnectProcessEnginePlugin" />
   <bean id="spinProcessEnginePlugin" class="org.camunda.spin.plugin.impl.SpinProcessEnginePlugin" />
 
