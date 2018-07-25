@@ -30,6 +30,18 @@
   </dependencyManagement>
 
   <dependencies>
+  
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-slf4j-impl</artifactId>
+      <version>2.0.1</version>
+    </dependency>
+    
+    <dependency>
+      <groupId>org.apache.logging.log4j</groupId>
+      <artifactId>log4j-core</artifactId>
+      <version>2.0.1</version> 
+    </dependency>
 
     <!-- camunda process engine -->
     <dependency>
@@ -74,12 +86,6 @@
     <dependency>
       <groupId>org.camunda.template-engines</groupId>
       <artifactId>camunda-template-engines-freemarker</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.slf4j</groupId>
-      <artifactId>slf4j-jcl</artifactId>
-      <version>1.7.5</version>
     </dependency>
 
     <!-- junit -->

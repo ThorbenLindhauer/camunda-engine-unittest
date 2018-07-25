@@ -41,16 +41,19 @@ public class SimpleTestCase {
     TaskService taskService = rule.getTaskService();
 
     runtimeService.startProcessInstanceByKey("workaround");
+    // => waiting at event-based gateway and loop task
 
     Task loopTask0 = taskService.createTaskQuery().singleResult();
 
     taskService.complete(loopTask0.getId(), Variables.createVariables().putValue("iteration", 0));
+    // => waiting at conditional event
 
     Task loopTask1 = taskService.createTaskQuery().singleResult();
 
     assertThat(loopTask1).isNull(); // condition not yet fulfilled
 
     runtimeService.correlateMessage("EnableCondition");
+    // => completing lower branch of execution and triggering conditional event
 
     loopTask1 = taskService.createTaskQuery().singleResult();
 
@@ -59,14 +62,15 @@ public class SimpleTestCase {
 
 
     taskService.complete(loopTask1.getId(), Variables.createVariables().putValue("iteration", 1));
+    // => looping once more
 
     Task loopTask2 = taskService.createTaskQuery().singleResult();
 
-    assertThat(loopTask1).isNotNull(); // condition is still fulfilled
-    assertThat(loopTask1.getTaskDefinitionKey()).isEqualTo("loopTask");
+    assertThat(loopTask2).isNotNull(); // condition is not yet fulfilled
+    assertThat(loopTask2.getTaskDefinitionKey()).isEqualTo("loopTask");
 
     taskService.complete(loopTask2.getId(), Variables.createVariables().putValue("iteration", 2));
-
+    // => leaving the loop
 
     Task afterLoopTask = taskService.createTaskQuery().singleResult();
 
