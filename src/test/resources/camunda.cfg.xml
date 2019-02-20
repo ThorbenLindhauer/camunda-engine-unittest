@@ -34,6 +34,7 @@
       <list>
         <ref bean="connectProcessEnginePlugin" />
         <ref bean="spinProcessEnginePlugin" />
+        <ref bean="examplePlugin" />
       </list>
     </property>
 
@@ -46,5 +47,5 @@
   <!-- engine plugin beans -->
   <bean id="connectProcessEnginePlugin" class="org.camunda.connect.plugin.impl.ConnectProcessEnginePlugin" />
   <bean id="spinProcessEnginePlugin" class="org.camunda.spin.plugin.impl.SpinProcessEnginePlugin" />
-
+  <bean id="examplePlugin" class="org.camunda.example.ExamplePlugin" />
 </beans>
