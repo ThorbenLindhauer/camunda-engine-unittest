@@ -16,12 +16,12 @@
  */
 package org.camunda.bpm.unittest;
 
-import org.camunda.bpm.engine.runtime.ProcessInstance;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.runtimeService;
+
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
-
-import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
-
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -34,22 +34,20 @@ public class SimpleTestCase {
   @Rule
   public ProcessEngineRule rule = new ProcessEngineRule();
 
+  @Before
+  public void setUp()
+  {
+    NotificationExecutionListener.NOTIFIED = false;
+  }
+
   @Test
   @Deployment(resources = {"testProcess.bpmn"})
   public void shouldExecuteProcess() {
-    // Given we create a new process instance
-    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("testProcess");
-    // Then it should be active
-    assertThat(processInstance).isActive();
-    // And it should be the only instance
-    assertThat(processInstanceQuery().count()).isEqualTo(1);
-    // And there should exist just a single task within that process instance
-    assertThat(task(processInstance)).isNotNull();
+    // given/when
+    runtimeService().startProcessInstanceByKey("testProcess");
 
-    // When we complete that task
-    complete(task(processInstance));
-    // Then the process instance should be ended
-    assertThat(processInstance).isEnded();
+    // then
+    assertThat(NotificationExecutionListener.NOTIFIED).isTrue();
   }
 
 }
