@@ -22,8 +22,14 @@ import org.camunda.bpm.engine.test.ProcessEngineRule;
 
 import static org.camunda.bpm.engine.test.assertions.ProcessEngineTests.*;
 
+import java.io.IOException;
+import java.io.InputStream;
+
 import org.junit.Rule;
 import org.junit.Test;
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.support.PathMatchingResourcePatternResolver;
 
 /**
  * @author Daniel Meyer
@@ -33,6 +39,19 @@ public class SimpleTestCase {
 
   @Rule
   public ProcessEngineRule rule = new ProcessEngineRule();
+
+  @Test
+  public void foo() throws IOException
+  {
+    PathMatchingResourcePatternResolver resolver = new PathMatchingResourcePatternResolver();
+
+    Resource[] resources = resolver.getResources("classpath:foo/nested/*");
+
+    for (Resource resource : resources)
+    {
+      System.out.println(resource.getFilename());
+    }
+  }
 
   @Test
   @Deployment(resources = {"testProcess.bpmn"})
