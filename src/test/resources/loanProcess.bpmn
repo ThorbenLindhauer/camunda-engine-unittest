@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xmlns:camunda="http://camunda.org/schema/1.0/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" id="Definitions_0lu77rg" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Camunda Modeler" exporterVersion="3.0.1">
+  <bpmn:process id="loanProcess" isExecutable="true">
+    <bpmn:startEvent id="StartEvent_1">
+      <bpmn:outgoing>SequenceFlow_00fdwf4</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_00fdwf4" sourceRef="StartEvent_1" targetRef="Submit_Loan_Request" />
+    <bpmn:sequenceFlow id="SequenceFlow_0wga9w1" sourceRef="Submit_Loan_Request" targetRef="ExclusiveGateway_1hls347" />
+    <bpmn:endEvent id="EndEvent_0pvg1m7">
+      <bpmn:incoming>SequenceFlow_1jngdow</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_1jngdow" sourceRef="Grant_Loan" targetRef="EndEvent_0pvg1m7" />
+    <bpmn:userTask id="Submit_Loan_Request" name="Submit Loan Request">
+      <bpmn:incoming>SequenceFlow_00fdwf4</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0wga9w1</bpmn:outgoing>
+    </bpmn:userTask>
+    <bpmn:serviceTask id="Grant_Loan" name="Grant Loan" camunda:type="external" camunda:topic="grant-loan">
+      <bpmn:incoming>SequenceFlow_1mepl0q</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1jngdow</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:exclusiveGateway id="ExclusiveGateway_1hls347" name="Less than $1,000?" default="SequenceFlow_0vy1qem">
+      <bpmn:incoming>SequenceFlow_0wga9w1</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1mepl0q</bpmn:outgoing>
+      <bpmn:outgoing>SequenceFlow_0vy1qem</bpmn:outgoing>
+    </bpmn:exclusiveGateway>
+    <bpmn:sequenceFlow id="SequenceFlow_1mepl0q" name="yes" sourceRef="ExclusiveGateway_1hls347" targetRef="Grant_Loan">
+      <bpmn:conditionExpression xsi:type="bpmn:tFormalExpression">${amount &lt; 1000}</bpmn:conditionExpression>
+    </bpmn:sequenceFlow>
+    <bpmn:sequenceFlow id="SequenceFlow_0vy1qem" name="no" sourceRef="ExclusiveGateway_1hls347" targetRef="Review_Request" />
+    <bpmn:endEvent id="EndEvent_0kvk1xo">
+      <bpmn:incoming>SequenceFlow_1nk9j30</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_1nk9j30" sourceRef="Review_Request" targetRef="EndEvent_0kvk1xo" />
+    <bpmn:userTask id="Review_Request" name="Review Request">
+      <bpmn:incoming>SequenceFlow_0vy1qem</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1nk9j30</bpmn:outgoing>
+    </bpmn:userTask>
+  </bpmn:process>
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="loanProcess">
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="156" y="177" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_00fdwf4_di" bpmnElement="SequenceFlow_00fdwf4">
+        <di:waypoint x="192" y="195" />
+        <di:waypoint x="235" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0wga9w1_di" bpmnElement="SequenceFlow_0wga9w1">
+        <di:waypoint x="335" y="195" />
+        <di:waypoint x="375" y="195" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_0pvg1m7_di" bpmnElement="EndEvent_0pvg1m7">
+        <dc:Bounds x="610" y="103" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1jngdow_di" bpmnElement="SequenceFlow_1jngdow">
+        <di:waypoint x="564" y="121" />
+        <di:waypoint x="610" y="121" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="UserTask_0l2zl9o_di" bpmnElement="Submit_Loan_Request">
+        <dc:Bounds x="235" y="155" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_1buk4mq_di" bpmnElement="Grant_Loan">
+        <dc:Bounds x="464" y="81" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ExclusiveGateway_1hls347_di" bpmnElement="ExclusiveGateway_1hls347" isMarkerVisible="true">
+        <dc:Bounds x="375" y="170" width="50" height="50" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="431" y="181" width="48" height="27" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1mepl0q_di" bpmnElement="SequenceFlow_1mepl0q">
+        <di:waypoint x="400" y="170" />
+        <di:waypoint x="400" y="121" />
+        <di:waypoint x="464" y="121" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="407" y="143" width="17" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0vy1qem_di" bpmnElement="SequenceFlow_0vy1qem">
+        <di:waypoint x="400" y="220" />
+        <di:waypoint x="400" y="276" />
+        <di:waypoint x="464" y="276" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="409" y="245" width="13" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_0kvk1xo_di" bpmnElement="EndEvent_0kvk1xo">
+        <dc:Bounds x="610" y="258" width="36" height="36" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1nk9j30_di" bpmnElement="SequenceFlow_1nk9j30">
+        <di:waypoint x="564" y="276" />
+        <di:waypoint x="610" y="276" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="UserTask_05hk3b9_di" bpmnElement="Review_Request">
+        <dc:Bounds x="464" y="236" width="100" height="80" />
+      </bpmndi:BPMNShape>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
