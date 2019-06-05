@@ -16,8 +16,17 @@
  */
 package org.camunda.bpm.unittest;
 
+import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.runtimeService;
+import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.task;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.assertThat;
+import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.complete;
+import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.externalTask;
+
+import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
+import org.camunda.bpm.engine.variable.Variables;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -30,6 +39,17 @@ public class SimpleTestCase {
   @Deployment(resources = {"loanProcess.bpmn"})
   public void shouldExecuteProcess() {
 
+    // 1
+    ProcessInstance processInstance = runtimeService().startProcessInstanceByKey("loanProcess");
+    assertThat(processInstance).isWaitingAt("Submit_Loan_Request");
+
+    // 2
+    complete(task(), Variables.createVariables().putValue("amount", 600));
+    assertThat(processInstance).isWaitingAt("Grant_Loan");
+
+    // 3
+    complete(externalTask());
+    assertThat(processInstance).isEnded();
   }
 
 }
