@@ -15,7 +15,7 @@
     <version.assertj>2.9.0</version.assertj>
     
     <!-- set the java version here -->
-    <version.java>1.7</version.java>
+    <version.java>1.8</version.java>
     
     <!-- set the plugin versions here -->
     <version.plugin.compiler>3.1</version.plugin.compiler>
@@ -40,6 +40,12 @@
 
   <dependencies>
     
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
+      <version>4.0.1</version>
+      <scope>test</scope>
+    </dependency>
 
     <!-- camunda process engine -->
     <dependency>
