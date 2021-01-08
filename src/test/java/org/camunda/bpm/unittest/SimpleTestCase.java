@@ -18,22 +18,16 @@ package org.camunda.bpm.unittest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.assertThat;
-import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.complete;
-import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.processInstanceQuery;
-import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.runtimeService;
-import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.task;
 import static org.camunda.bpm.engine.test.assertions.bpmn.BpmnAwareTests.taskQuery;
-
 
 import org.camunda.bpm.engine.ManagementService;
 import org.camunda.bpm.engine.RuntimeService;
-import org.camunda.bpm.engine.TaskService;
 import org.camunda.bpm.engine.history.HistoricJobLog;
 import org.camunda.bpm.engine.impl.persistence.entity.JobEntity;
-import org.camunda.bpm.engine.runtime.Job;
 import org.camunda.bpm.engine.runtime.ProcessInstance;
 import org.camunda.bpm.engine.test.Deployment;
 import org.camunda.bpm.engine.test.ProcessEngineRule;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -45,6 +39,11 @@ public class SimpleTestCase {
 
   @Rule
   public ProcessEngineRule rule = new ProcessEngineRule();
+
+  @Before
+  public void resetRecorder() {
+    RecordingDelegate.reset();
+  }
 
   @Test
   @Deployment(resources = {"testProcess.bpmn"})
@@ -65,6 +64,27 @@ public class SimpleTestCase {
     HistoricJobLog jobLog = rule.getHistoryService().createHistoricJobLogQuery().successLog().singleResult();
 
 //    assertThat(runtimeService.createProcessInstanceQuery().count()).isEqualTo(0);
+
+  }
+
+  @Test
+  @Deployment(resources = {"two-async-continuations.bpmn"})
+  public void shouldNotExecuteExclusiveFollowupJobTwice() throws InterruptedException {
+    // given
+    RuntimeService runtimeService = rule.getRuntimeService();
+    runtimeService.startProcessInstanceByKey("testProcess");
+
+    // when job executor takes care of jobs
+    Thread.sleep(5000);
+
+    // then
+    long numJobs = rule.getManagementService().createJobQuery().count();
+    assertThat(numJobs).isEqualTo(0);
+
+    assertThat(taskQuery().singleResult()).isNotNull();
+
+    assertThat(RecordingDelegate.getNumInvocations()).isEqualTo(1);
+
 
   }
 }

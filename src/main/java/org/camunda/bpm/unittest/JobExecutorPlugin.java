@@ -76,8 +76,9 @@ public class JobExecutorPlugin implements ProcessEnginePlugin {
           .filter(j -> {
         CachedDbEntity cachedJob = entityCache.getCachedEntity(MessageEntity.class, j.getId());
         return j.getJobHandlerType().equals(AsyncContinuationJobHandler.TYPE) && cachedJob.getEntityState() == DbEntityState.TRANSIENT;
-      })
-      .collect(Collectors.toList());
+          })
+          .filter(j -> j.getLockOwner() == null) // was not already locked for current thread by JobManager#hintJobExecutorIfNeeded
+          .collect(Collectors.toList());
 
       newJobs.forEach(j -> {
         Date lockTime = new Date(new Date().toInstant().toEpochMilli() + Duration.ofMinutes(5).toMillis());
